@@ -34,22 +34,30 @@ class JSONLoader(BaseLoader):
         indices: List[str],
         field: str,  # TODO: make this a list so it is easier to get multiple fields from a json file. (i.e. Mustard: context + sentence)
         data_type: Union[np.dtype, str] = str,
+        input_metadata: List[object] = None,
+        metadata_index_method: str = "index", # filename, index or metadata field
         chunk_size: Optional[int] = None,
         ext: str = ".json",
     ):
         super().__init__(
-            source_path, indices, data_type, chunk_size, ModalityType.TEXT, ext
+            source_path, indices, data_type, input_metadata, metadata_index_method, chunk_size, ModalityType.TEXT, ext
         )
         self.field = field
 
-    def extract(self, file: str, index: Optional[Union[str, List[str]]] = None):
+    def extract(
+        self, 
+        file: str, 
+        index: Optional[Union[str, List[str]]] = None, 
+        metadata: Optional[Union[object, List[object]]] = None, 
+        counter: int | None = None
+    ):
         self.file_sanity_check(file)
         with open(file) as f:
             json_file = json.load(f)
 
             if isinstance(index, str):
                 index = [index]
-            for idx in index:
+            for counter, idx in enumerate(index):
                 try:
                     text = json_file[idx][self.field]
                 except:
@@ -57,4 +65,5 @@ class JSONLoader(BaseLoader):
 
                 text = " ".join(text) if isinstance(text, list) else text
                 self.data.append(text)
-                self.metadata[idx] = self.modality_type.create_metadata(len(text), text)
+                _metadata = metadata if isinstance(metadata, dict) else metadata[counter]
+                self.metadata[self.get_metadata_index(idx, _metadata, counter)] = self.modality_type.create_metadata(len(text), text) | (_metadata or {})

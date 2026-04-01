@@ -30,20 +30,29 @@ class TextLoader(BaseLoader):
         source_path: str,
         indices: List[str],
         data_type: str = str,
+        input_metadata: List[object] = None,
+        metadata_index_method: str = "index", # filename, index or metadata field
         chunk_size: Optional[int] = None,
         prefix: Optional[Pattern[str]] = None,
     ):
-        super().__init__(source_path, indices, data_type, chunk_size, ModalityType.TEXT)
+        super().__init__(source_path, indices, data_type, input_metadata, metadata_index_method, chunk_size, ModalityType.TEXT)
         self.prefix = prefix
 
-    def extract(self, file: str, index: Optional[Union[str, List[str]]] = None):
+    def extract(
+        self, 
+        file: str, 
+        index: Optional[Union[str, List[str]]] = None, 
+        metadata: Optional[Union[object, List[object]]] = None, 
+        counter: int | None = None
+    ):
         self.file_sanity_check(file)
         with open(file) as text_file:
             for i, line in enumerate(text_file):
                 if self.prefix:
                     line = re.sub(self.prefix, "", line)
                 line = line.replace("\n", "")
-                self.metadata[file] = self.modality_type.create_metadata(
+                metadata = metadata if isinstance(metadata, dict) else metadata[counter]
+                self.metadata[self.get_metadata_index(index, metadata, i)] = self.modality_type.create_metadata(
                     len(line.split()), line
-                )
+                ) | (metadata or {})
                 self.data.append(line)

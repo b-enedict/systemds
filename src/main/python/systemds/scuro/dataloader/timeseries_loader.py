@@ -50,7 +50,13 @@ class TimeseriesLoader(BaseLoader):
         if self.file_format not in ["npy", "mat", "hdf5", "txt"]:
             raise ValueError(f"Unsupported file format: {self.file_format}")
 
-    def extract(self, file: str, index: Optional[Union[str, List[str]]] = None):
+    def extract(
+        self, 
+        file: str, 
+        index: Optional[Union[str, List[str]]] = None, 
+        metadata: Optional[Union[object, List[object]]] = None, 
+        counter: int | None = None
+    ):
         self.file_sanity_check(file)
 
         if self.file_format == "npy":

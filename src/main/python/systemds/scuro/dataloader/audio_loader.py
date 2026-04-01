@@ -32,30 +32,38 @@ class AudioLoader(BaseLoader):
         source_path: str,
         indices: List[str],
         data_type: Union[np.dtype, str] = np.float32,
+        input_metadata: List[object] = None,
+        metadata_index_method: str = "index", # filename, index or metadata field
         chunk_size: Optional[int] = None,
         normalize: bool = True,
         load=True,
     ):
         super().__init__(
-            source_path, indices, data_type, chunk_size, ModalityType.AUDIO
+            source_path, indices, data_type, input_metadata, metadata_index_method, chunk_size, ModalityType.AUDIO
         )
         self.normalize = normalize
         self.load_data_from_file = load
 
-    def extract(self, file: str, index: Optional[Union[str, List[str]]] = None):
+    def extract(
+        self, 
+        file: str, 
+        index: Optional[Union[str, List[str]]] = None, 
+        metadata: Optional[Union[object, List[object]]] = None, 
+        counter: int | None = None
+    ):
         self.file_sanity_check(file)
         if not self.load_data_from_file:
             import numpy as np
 
-            self.metadata[file] = self.modality_type.create_metadata(
+            self.metadata[self.get_metadata_index(index, metadata, counter)] = self.modality_type.create_metadata(
                 1000, np.array([0])
-            )
+            ) | (metadata or {})
         else:
             audio, sr = librosa.load(file, dtype=self._data_type)
 
             if self.normalize:
                 audio = librosa.util.normalize(audio)
 
-            self.metadata[file] = self.modality_type.create_metadata(sr, audio)
+            self.metadata[self.get_metadata_index(index, metadata, counter)] = self.modality_type.create_metadata(sr, audio) | metadata
 
             self.data.append(audio)

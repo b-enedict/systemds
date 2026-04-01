@@ -25,13 +25,14 @@ import math
 
 import numpy as np
 
-
 class BaseLoader(ABC):
     def __init__(
         self,
         source_path: str,
         indices: List[str],
         data_type: Union[np.dtype, str],
+        input_metadata: List[object] = None,
+        metadata_index_method: str = "index", # filename, index or metadata field
         chunk_size: Optional[int] = None,
         modality_type=None,
         ext=None,
@@ -44,12 +45,12 @@ class BaseLoader(ABC):
         (otherwise please provide your own Dataloader that knows about the file name convention)
         """
         self.data = []
-        self.metadata = (
-            {}
-        )  # TODO: check what the index should be for storing the metadata (file_name, counter, ...)
+        self.metadata = {}
+        self.input_metadata = input_metadata
         self.source_path = source_path
         self.indices = indices
         self.modality_type = modality_type
+        self.metadata_index_method = metadata_index_method
         self._next_chunk = 0
         self._num_chunks = 1
         self._chunk_size = None
@@ -96,7 +97,7 @@ class BaseLoader(ABC):
         if self._chunk_size:
             return self._load_next_chunk()
 
-        return self._load(self.indices)
+        return self._load(self.indices, 0)
 
     def update_chunk_sizes(self, other):
         if not self._chunk_size and not other.chunk_size:
@@ -122,15 +123,16 @@ class BaseLoader(ABC):
             * self._chunk_size
         ]
         self._next_chunk += 1
-        return self._load(next_chunk_indices)
+        return self._load(next_chunk_indices, (self._next_chunk-1) * self._chunk_size)
 
-    def _load(self, indices: List[str]):
+    def _load(self, indices: List[str], counter_start):
         file_names = self.get_file_names(indices)
         if isinstance(file_names, str):
-            self.extract(file_names, indices)
+            self.extract(file_names, indices, self.input_metadata, -1)
         else:
             for i, file_name in enumerate(file_names):
-                self.extract(file_name, indices[i])
+                global_index = counter_start + i
+                self.extract(file_name, indices[i], self.input_metadata[global_index], global_index)
 
         return self.data, self.metadata
 
@@ -145,9 +147,19 @@ class BaseLoader(ABC):
             return file_names
         else:
             return self.source_path
+        
+    def get_metadata_index(self, index: str, metadata: object | None, counter: int | None):
+        match self.metadata_index_method:
+            case "index":
+                return str(index)
+            case "counter":
+                return str(counter)
+            case _:
+                return metadata[self.metadata_index_method]
+        
 
     @abstractmethod
-    def extract(self, file: str, index: Optional[Union[str, List[str]]] = None):
+    def extract(self, file: str, index: Optional[Union[str, List[str]]] = None, metadata: Optional[Union[object, List[object]]] = None, counter: int | None = None):
         pass
 
     @staticmethod

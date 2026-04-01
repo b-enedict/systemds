@@ -80,6 +80,8 @@ class JoinedModality(Modality):
             idx_1 = list(self.left_modality.metadata.values())[i + starting_idx][
                 self.condition.leftField
             ]
+            if np.isscalar(idx_1):
+                idx_1 = [idx_1]
             if (
                 self.condition.alignment is None and self.condition.join_type == "<"
             ):  # TODO compute correct alignment timestamps/spatial params
@@ -93,6 +95,8 @@ class JoinedModality(Modality):
             idx_2 = list(self.right_modality.metadata.values())[i][
                 self.condition.rightField
             ]
+            if np.isscalar(idx_2):
+                idx_2 = [idx_2]
             self.joined_right.data.append([])
 
             c = 0
@@ -127,7 +131,13 @@ class JoinedModality(Modality):
                 else:
                     while c < len(idx_2) - 1 and idx_2[c] <= idx_1[j]:
                         if idx_2[c] == idx_1[j]:
-                            right.append(self.right_modality.data[i][c])
+                            right = np.concatenate(
+                                [
+                                    right,
+                                    self.right_modality.data[i][c]
+                                ],
+                                axis=0
+                            )
                         c = c + 1
 
                 if (
@@ -185,8 +195,8 @@ class JoinedModality(Modality):
         modalities = [self.left_modality, self.right_modality]
         self.data = []
         reshape = False
-        if self.left_modality.get_data_shape() != self.joined_right.get_data_shape():
-            reshape = True
+        # if self.left_modality.get_data_shape() != self.joined_right.get_data_shape():
+        #     reshape = True
         for i in range(0, len(self.left_modality.data)):
             self.data.append([])
             for j in range(0, len(self.left_modality.data[i])):

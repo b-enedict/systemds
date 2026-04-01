@@ -33,17 +33,25 @@ class VideoLoader(BaseLoader):
         source_path: str,
         indices: List[str],
         data_type: Union[np.dtype, str] = np.float16,
+        input_metadata: List[object] = None,
+        metadata_index_method: str = "index", # filename, index or metadata field
         chunk_size: Optional[int] = None,
         load=True,
         fps=None,
     ):
         super().__init__(
-            source_path, indices, data_type, chunk_size, ModalityType.VIDEO
+            source_path, indices, data_type, input_metadata, metadata_index_method, chunk_size, ModalityType.VIDEO
         )
         self.load_data_from_file = load
         self.fps = fps
 
-    def extract(self, file: str, index: Optional[Union[str, List[str]]] = None):
+    def extract(
+        self, 
+        file: str, 
+        index: Optional[Union[str, List[str]]] = None, 
+        metadata: Optional[Union[object, List[object]]] = None, 
+        counter: int | None = None
+    ):
         self.file_sanity_check(file)
         cap = cv2.VideoCapture(file)
 
@@ -62,9 +70,9 @@ class VideoLoader(BaseLoader):
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         num_channels = 3
 
-        self.metadata[file] = self.modality_type.create_metadata(
+        self.metadata[self.get_metadata_index(index, metadata, counter)] = self.modality_type.create_metadata(
             self.fps, length, width, height, num_channels
-        )
+        ) | (metadata or {})
 
         frames = []
         idx = 0
