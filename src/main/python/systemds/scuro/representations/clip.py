@@ -93,6 +93,9 @@ class CLIPVisual(UnimodalRepresentation):
                 with torch.no_grad():
                     output = self.model.get_image_features(**inputs)
 
+                if hasattr(output, "pooler_output"):
+                    output = output.pooler_output
+
                 if len(output.shape) > 2:
                     output = torch.nn.functional.adaptive_avg_pool2d(output, (1, 1))
 
@@ -152,7 +155,7 @@ class CLIPText(UnimodalRepresentation):
             )
             inputs.to(get_device())
             with torch.no_grad():
-                text_embedding = model.get_text_features(**inputs)
+                text_embedding = model.get_text_features(**inputs).pooler_output
                 embeddings.append(
                     text_embedding.squeeze().detach().cpu().numpy().reshape(1, -1)
                 )
